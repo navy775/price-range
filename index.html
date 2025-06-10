@@ -11,47 +11,49 @@
     }
   </style>
 </head>
-<body class="bg-gradient-to-br from-blue-50 to-blue-100 min-h-screen p-6">
-  <div class="max-w-5xl mx-auto bg-white shadow-2xl rounded-2xl p-8">
-    <h1 class="text-3xl font-bold mb-6 text-center text-blue-800">當沖損益試算器</h1>
+<body class="bg-gradient-to-br from-blue-50 to-blue-100 min-h-screen p-4 sm:p-6">
+  <div class="max-w-4xl mx-auto bg-white shadow-2xl rounded-2xl p-4 sm:p-6">
+    <h1 class="text-2xl sm:text-3xl font-bold mb-6 text-center text-blue-800">當沖損益試算器</h1>
 
     <!-- 設定表單 -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
       <div>
-        <label class="block font-semibold text-gray-700">買入價格</label>
-        <input type="number" id="buyPrice" class="w-full border rounded p-2" value="100">
+        <label class="block font-semibold text-gray-700 mb-1">買入價格</label>
+        <input type="number" id="buyPrice" class="w-full border rounded p-3" value="100">
       </div>
       <div>
-        <label class="block font-semibold text-gray-700">股數</label>
-        <input type="number" id="shares" class="w-full border rounded p-2" value="1000">
+        <label class="block font-semibold text-gray-700 mb-1">股數</label>
+        <input type="number" id="shares" class="w-full border rounded p-3" value="1000">
       </div>
       <div>
-        <label class="block font-semibold text-gray-700">手續費折數</label>
-        <input type="number" id="feeRate" class="w-full border rounded p-2" value="5">
+        <label class="block font-semibold text-gray-700 mb-1">手續費折數</label>
+        <input type="number" id="feeRate" class="w-full border rounded p-3" value="5">
       </div>
       <div>
-        <label class="block font-semibold text-gray-700">最低手續費（元）</label>
-        <input type="number" id="minFee" class="w-full border rounded p-2" value="20">
+        <label class="block font-semibold text-gray-700 mb-1">最低手續費（元）</label>
+        <input type="number" id="minFee" class="w-full border rounded p-3" value="20">
       </div>
       <div>
-        <label class="block font-semibold text-gray-700">交易稅率（%）</label>
-        <input type="number" id="taxRate" class="w-full border rounded p-2" value="0.15">
+        <label class="block font-semibold text-gray-700 mb-1">交易稅率（%）</label>
+        <input type="number" id="taxRate" class="w-full border rounded p-3" value="0.15">
       </div>
       <div>
-        <label class="block font-semibold text-gray-700">交易方向</label>
-        <select id="direction" class="w-full border rounded p-2">
+        <label class="block font-semibold text-gray-700 mb-1">交易方向</label>
+        <select id="direction" class="w-full border rounded p-3">
           <option value="long" selected>作多</option>
           <option value="short">作空</option>
         </select>
       </div>
     </div>
 
-    <button onclick="calculate()" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">開始試算</button>
+    <div class="text-center">
+      <button onclick="calculate()" class="bg-blue-600 text-white text-lg px-6 py-3 rounded hover:bg-blue-700 w-full sm:w-auto">開始試算</button>
+    </div>
 
     <!-- 表格顯示結果 -->
-    <div class="mt-8 overflow-auto">
-      <table class="w-full text-center border border-gray-300 rounded-xl overflow-hidden">
-        <thead class="bg-blue-200 text-blue-800">
+    <div class="mt-8 overflow-x-auto">
+      <table class="min-w-full text-center border border-gray-300 rounded-xl">
+        <thead class="bg-blue-200 text-blue-800 text-sm sm:text-base">
           <tr>
             <th class="p-2">買入價</th>
             <th class="p-2">賣出價</th>
@@ -61,7 +63,7 @@
             <th class="p-2">報酬率</th>
           </tr>
         </thead>
-        <tbody id="resultTable" class="bg-white"></tbody>
+        <tbody id="resultTable" class="bg-white text-sm sm:text-base"></tbody>
       </table>
     </div>
   </div>
@@ -79,12 +81,12 @@
     function calculate() {
       const buy = parseFloat(document.getElementById('buyPrice').value);
       const shares = parseInt(document.getElementById('shares').value);
-      const feeRate = parseFloat(document.getElementById('feeRate').value) / 10; // 將「5折」轉成 0.5
+      const feeRate = parseFloat(document.getElementById('feeRate').value) / 10;
       const minFee = parseInt(document.getElementById('minFee').value);
       const taxRate = parseFloat(document.getElementById('taxRate').value) / 100;
       const direction = document.getElementById('direction').value;
       const tick = getTickSize(buy);
-      const steps = 10; // 模擬10階價格變動
+      const steps = 10;
 
       const resultTable = document.getElementById('resultTable');
       resultTable.innerHTML = '';
