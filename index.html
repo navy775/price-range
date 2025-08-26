@@ -66,9 +66,15 @@
         <tbody id="resultTable" class="bg-white text-sm sm:text-base"></tbody>
       </table>
     </div>
+    <div class="text-center mt-4">
+      <button onclick="showMore()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300 w-full sm:w-auto">查看更多</button>
+    </div>
   </div>
 
   <script>
+    const baseSteps = 10;
+    let currentSteps = baseSteps;
+
     function getTickSize(price) {
       if (price < 10) return 0.01;
       if (price < 50) return 0.05;
@@ -78,7 +84,7 @@
       return 5;
     }
 
-    function calculate() {
+    function calculate(reset = true) {
       const buy = parseFloat(document.getElementById('buyPrice').value);
       const shares = parseInt(document.getElementById('shares').value);
       const feeRate = parseFloat(document.getElementById('feeRate').value) / 10;
@@ -86,13 +92,13 @@
       const taxRate = parseFloat(document.getElementById('taxRate').value) / 100;
       const direction = document.getElementById('direction').value;
       const tick = getTickSize(buy);
-      const steps = 10;
+      if (reset) currentSteps = baseSteps;
 
       const resultTable = document.getElementById('resultTable');
       resultTable.innerHTML = '';
 
       let priceSteps = [];
-      for (let i = -steps; i <= steps; i++) {
+      for (let i = -currentSteps; i <= currentSteps; i++) {
         let sell = +(buy + i * tick).toFixed(2);
         if (direction === 'short') sell = +(buy - i * tick).toFixed(2);
         priceSteps.push(sell);
@@ -120,6 +126,11 @@
         `;
         resultTable.appendChild(row);
       }
+    }
+
+    function showMore() {
+      currentSteps += baseSteps;
+      calculate(false);
     }
   </script>
 </body>
