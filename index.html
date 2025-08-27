@@ -12,6 +12,7 @@
   </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-blue-100 min-h-screen p-4 sm:p-6">
+
   <div class="max-w-4xl mx-auto bg-white shadow-2xl rounded-2xl p-4 sm:p-6">
     <h1 class="text-2xl sm:text-3xl font-bold mb-6 text-center text-blue-800">當沖損益試算器</h1>
 
@@ -46,12 +47,17 @@
       </div>
     </div>
 
-    <div class="text-center">
+    <div class="text-center mb-6">
       <button onclick="calculate()" class="bg-blue-600 text-white text-lg px-6 py-3 rounded hover:bg-blue-700 w-full sm:w-auto">開始試算</button>
     </div>
 
+    <!-- 顯示更多上方 -->
+    <div class="text-center my-4">
+      <button onclick="priceStepCount += 5; renderTable();" class="text-sm text-blue-600 underline hover:text-blue-800">↑ 顯示更多上方價格</button>
+    </div>
+
     <!-- 表格顯示結果 -->
-    <div class="mt-8 overflow-x-auto">
+    <div class="mt-4 overflow-x-auto">
       <table class="min-w-full text-center border border-gray-300 rounded-xl">
         <thead class="bg-blue-200 text-blue-800 text-sm sm:text-base">
           <tr>
@@ -66,9 +72,17 @@
         <tbody id="resultTable" class="bg-white text-sm sm:text-base"></tbody>
       </table>
     </div>
+
+    <!-- 顯示更多下方 -->
+    <div class="text-center my-4">
+      <button onclick="priceStepCount += 5; renderTable();" class="text-sm text-blue-600 underline hover:text-blue-800">↓ 顯示更多下方價格</button>
+    </div>
   </div>
 
   <script>
+    let priceStepCount = 10;
+    let buy = 100, shares = 1000, feeRate = 0.5, minFee = 20, taxRate = 0.0015, direction = "long";
+
     function getTickSize(price) {
       if (price < 10) return 0.01;
       if (price < 50) return 0.05;
@@ -79,14 +93,19 @@
     }
 
     function calculate() {
-      const buy = parseFloat(document.getElementById('buyPrice').value);
-      const shares = parseInt(document.getElementById('shares').value);
-      const feeRate = parseFloat(document.getElementById('feeRate').value) / 10;
-      const minFee = parseInt(document.getElementById('minFee').value);
-      const taxRate = parseFloat(document.getElementById('taxRate').value) / 100;
-      const direction = document.getElementById('direction').value;
+      buy = parseFloat(document.getElementById('buyPrice').value);
+      shares = parseInt(document.getElementById('shares').value);
+      feeRate = parseFloat(document.getElementById('feeRate').value) / 10;
+      minFee = parseInt(document.getElementById('minFee').value);
+      taxRate = parseFloat(document.getElementById('taxRate').value) / 100;
+      direction = document.getElementById('direction').value;
+      priceStepCount = 10;
+      renderTable();
+    }
+
+    function renderTable() {
       const tick = getTickSize(buy);
-      const steps = 10;
+      const steps = priceStepCount;
 
       const resultTable = document.getElementById('resultTable');
       resultTable.innerHTML = '';
@@ -106,7 +125,9 @@
         const tax = Math.floor(totalSell * taxRate);
         const fee = Math.max(minFee, Math.floor((totalBuy + totalSell) * 0.001425 * feeRate));
 
-        const profit = direction === 'long' ? (totalSell - totalBuy - tax - fee) : (totalBuy - totalSell - tax - fee);
+        const profit = direction === 'long'
+          ? (totalSell - totalBuy - tax - fee)
+          : (totalBuy - totalSell - tax - fee);
         const returnRate = (profit / totalBuy * 100).toFixed(2);
 
         const row = document.createElement('tr');
