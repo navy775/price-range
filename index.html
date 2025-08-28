@@ -3,82 +3,92 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>損益試算工具</title>
+  <title>損益試算器</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body {
       font-family: 'Noto Sans TC', sans-serif;
     }
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
+    .hidden-tab {
+      display: none;
+    }
+    .active-tab {
+      display: block;
+    }
   </style>
 </head>
-<body class="bg-gradient-to-br from-blue-50 to-green-100 min-h-screen p-4 sm:p-6">
-  <div class="max-w-5xl mx-auto bg-white shadow-2xl rounded-2xl p-4 sm:p-6">
-    <h1 class="text-2xl sm:text-3xl font-bold mb-6 text-center text-blue-800">損益試算工具</h1>
+<body class="bg-gradient-to-br from-blue-50 to-blue-100 min-h-screen p-4 sm:p-6">
+  <div class="max-w-4xl mx-auto bg-white shadow-2xl rounded-2xl p-4 sm:p-6">
+    <h1 class="text-2xl sm:text-3xl font-bold mb-6 text-center text-blue-800">損益試算器</h1>
 
-    <!-- 分頁選單 -->
-    <div class="mb-6 flex justify-center space-x-4">
-      <button onclick="showTab('daytrade')" class="tab-btn bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">當沖試算</button>
-      <button onclick="showTab('stock')" class="tab-btn bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">個股試算</button>
+    <!-- 分頁按鈕 -->
+    <div class="flex justify-center space-x-4 mb-6">
+      <button onclick="switchTab('dayTradeTab')" class="tab-button bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">當沖試算</button>
+      <button onclick="switchTab('stockTab')" class="tab-button bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded">股票試算</button>
     </div>
 
-    <!-- 當沖分頁內容 -->
-    <div id="daytrade" class="tab-content active">
-      <h2 class="text-xl font-semibold mb-4 text-blue-700">當沖損益試算器</h2>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-        <div><label class="block font-semibold">買入價格</label><input type="number" id="dt_buy" class="w-full border rounded p-2" value="100"></div>
-        <div><label class="block font-semibold">股數</label><input type="number" id="dt_shares" class="w-full border rounded p-2" value="1000"></div>
-        <div><label class="block font-semibold">手續費折數（輸入5代表五折）</label><input type="number" id="dt_feeRate" class="w-full border rounded p-2" value="5"></div>
-        <div><label class="block font-semibold">最低手續費（元）</label><input type="number" id="dt_minFee" class="w-full border rounded p-2" value="20"></div>
-        <div><label class="block font-semibold">交易稅率（%）</label><input type="number" id="dt_taxRate" class="w-full border rounded p-2" value="0.15"></div>
-        <div><label class="block font-semibold">交易方向</label>
-          <select id="dt_direction" class="w-full border rounded p-2">
+    <!-- 當沖試算器 -->
+    <div id="dayTradeTab" class="active-tab">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        <div><label class="block font-semibold mb-1">買入價格</label><input type="number" id="buyPrice" class="w-full border rounded p-3" value="100"></div>
+        <div><label class="block font-semibold mb-1">股數</label><input type="number" id="shares" class="w-full border rounded p-3" value="1000"></div>
+        <div><label class="block font-semibold mb-1">手續費折數</label><input type="number" id="feeRate" class="w-full border rounded p-3" value="5"></div>
+        <div><label class="block font-semibold mb-1">最低手續費（元）</label><input type="number" id="minFee" class="w-full border rounded p-3" value="20"></div>
+        <div><label class="block font-semibold mb-1">交易稅率（%）</label><input type="number" id="taxRate" class="w-full border rounded p-3" value="0.15"></div>
+        <div><label class="block font-semibold mb-1">交易方向</label>
+          <select id="direction" class="w-full border rounded p-3">
             <option value="long" selected>作多</option>
             <option value="short">作空</option>
           </select>
         </div>
       </div>
-      <div class="text-center mb-4">
-        <button onclick="calculateDayTrade()" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">開始試算</button>
+
+      <div class="text-center">
+        <button onclick="resetAndCalculate()" class="bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700 w-full sm:w-auto">開始試算</button>
       </div>
-      <div class="overflow-x-auto">
+
+      <div class="flex justify-center gap-4 mt-6">
+        <button onclick="showMore('up')" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded">顯示更高價格</button>
+        <button onclick="showMore('down')" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded">顯示更低價格</button>
+      </div>
+
+      <div class="mt-8 overflow-x-auto">
         <table class="min-w-full text-center border border-gray-300 rounded-xl">
           <thead class="bg-blue-200 text-blue-800 text-sm sm:text-base">
-            <tr>
-              <th class="p-2">買入價</th><th class="p-2">賣出價</th><th class="p-2">交易稅</th>
-              <th class="p-2">手續費</th><th class="p-2">損益</th><th class="p-2">報酬率</th>
-            </tr>
+            <tr><th class="p-2">買入價</th><th class="p-2">賣出價</th><th class="p-2">交易稅</th><th class="p-2">手續費</th><th class="p-2">損益</th><th class="p-2">報酬率</th></tr>
           </thead>
-          <tbody id="dt_result" class="bg-white text-sm sm:text-base"></tbody>
+          <tbody id="resultTable" class="bg-white text-sm sm:text-base"></tbody>
         </table>
       </div>
     </div>
 
-    <!-- 個股分頁內容 -->
-    <div id="stock" class="tab-content">
-      <h2 class="text-xl font-semibold mb-4 text-green-700">個股損益試算器</h2>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-        <div><label class="block font-semibold">買入價格</label><input type="number" id="st_buy" class="w-full border rounded p-2" value="100"></div>
-        <div><label class="block font-semibold">賣出價格</label><input type="number" id="st_sell" class="w-full border rounded p-2" value="105"></div>
-        <div><label class="block font-semibold">股數</label><input type="number" id="st_shares" class="w-full border rounded p-2" value="1000"></div>
-        <div><label class="block font-semibold">手續費折數（輸入5代表五折）</label><input type="number" id="st_feeRate" class="w-full border rounded p-2" value="5"></div>
-        <div><label class="block font-semibold">最低手續費（元）</label><input type="number" id="st_minFee" class="w-full border rounded p-2" value="20"></div>
-        <div><label class="block font-semibold">交易稅率（%）</label><input type="number" id="st_taxRate" class="w-full border rounded p-2" value="0.3"></div>
+    <!-- 股票試算器 -->
+    <div id="stockTab" class="hidden-tab">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <div><label class="block font-semibold mb-1">買入價格</label><input type="number" id="stockBuy" class="w-full border rounded p-3" value="100"></div>
+        <div><label class="block font-semibold mb-1">賣出價格</label><input type="number" id="stockSell" class="w-full border rounded p-3" value="110"></div>
+        <div><label class="block font-semibold mb-1">股數</label><input type="number" id="stockShares" class="w-full border rounded p-3" value="1000"></div>
+        <div><label class="block font-semibold mb-1">交易稅率（%）</label><input type="number" id="stockTaxRate" class="w-full border rounded p-3" value="0.3"></div>
+        <div><label class="block font-semibold mb-1">手續費率（千分之）</label><input type="number" id="stockFeeRate" class="w-full border rounded p-3" value="1.425"></div>
       </div>
-      <div class="text-center mb-4">
-        <button onclick="calculateStock()" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">開始試算</button>
+
+      <div class="text-center">
+        <button onclick="calcStock()" class="bg-green-600 text-white px-6 py-3 rounded hover:bg-green-700 w-full sm:w-auto">開始試算</button>
       </div>
-      <div class="overflow-x-auto text-center">
-        <div id="st_result" class="text-base font-semibold text-gray-700"></div>
+
+      <div class="mt-6">
+        <p id="stockResult" class="text-center text-lg font-semibold text-gray-700"></p>
       </div>
     </div>
   </div>
 
   <script>
-    function showTab(tabId) {
-      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-      document.getElementById(tabId).classList.add('active');
+    let currentSteps = 10;
+
+    function switchTab(tabId) {
+      document.getElementById('dayTradeTab').className = 'hidden-tab';
+      document.getElementById('stockTab').className = 'hidden-tab';
+      document.getElementById(tabId).className = 'active-tab';
     }
 
     function getTickSize(price) {
@@ -90,19 +100,29 @@
       return 5;
     }
 
-    function calculateDayTrade() {
-      const buy = parseFloat(document.getElementById('dt_buy').value);
-      const shares = parseInt(document.getElementById('dt_shares').value);
-      const feeRate = parseFloat(document.getElementById('dt_feeRate').value) / 10;
-      const minFee = parseFloat(document.getElementById('dt_minFee').value);
-      const taxRate = parseFloat(document.getElementById('dt_taxRate').value) / 100;
-      const direction = document.getElementById('dt_direction').value;
+    function resetAndCalculate() {
+      currentSteps = 10;
+      calculate();
+    }
+
+    function showMore() {
+      currentSteps += 5;
+      calculate();
+    }
+
+    function calculate() {
+      const buy = parseFloat(document.getElementById('buyPrice').value);
+      const shares = parseInt(document.getElementById('shares').value);
+      const feeRate = parseFloat(document.getElementById('feeRate').value) / 10;
+      const minFee = parseInt(document.getElementById('minFee').value);
+      const taxRate = parseFloat(document.getElementById('taxRate').value) / 100;
+      const direction = document.getElementById('direction').value;
       const tick = getTickSize(buy);
-      const resultTable = document.getElementById('dt_result');
+      const resultTable = document.getElementById('resultTable');
       resultTable.innerHTML = '';
 
       let priceSteps = [];
-      for (let i = -10; i <= 10; i++) {
+      for (let i = -currentSteps; i <= currentSteps; i++) {
         let sell = +(buy + i * tick).toFixed(2);
         if (direction === 'short') sell = +(buy - i * tick).toFixed(2);
         priceSteps.push(sell);
@@ -124,29 +144,28 @@
           <td class="p-2">${tax}</td>
           <td class="p-2">${fee}</td>
           <td class="p-2 ${profit >= 0 ? 'text-green-600' : 'text-red-600'}">${profit}</td>
-          <td class="p-2 ${profit >= 0 ? 'text-green-600' : 'text-red-600'}">${returnRate}%</td>
-        `;
+          <td class="p-2 ${profit >= 0 ? 'text-green-600' : 'text-red-600'}">${returnRate}%</td>`;
         resultTable.appendChild(row);
       }
     }
 
-    function calculateStock() {
-      const buy = parseFloat(document.getElementById('st_buy').value);
-      const sell = parseFloat(document.getElementById('st_sell').value);
-      const shares = parseInt(document.getElementById('st_shares').value);
-      const feeRate = parseFloat(document.getElementById('st_feeRate').value) / 10;
-      const minFee = parseFloat(document.getElementById('st_minFee').value);
-      const taxRate = parseFloat(document.getElementById('st_taxRate').value) / 100;
+    function calcStock() {
+      const buy = parseFloat(document.getElementById('stockBuy').value);
+      const sell = parseFloat(document.getElementById('stockSell').value);
+      const shares = parseInt(document.getElementById('stockShares').value);
+      const feeRate = parseFloat(document.getElementById('stockFeeRate').value) / 1000;
+      const taxRate = parseFloat(document.getElementById('stockTaxRate').value) / 100;
 
       const totalBuy = buy * shares;
       const totalSell = sell * shares;
+      const buyFee = Math.floor(totalBuy * feeRate);
+      const sellFee = Math.floor(totalSell * feeRate);
       const tax = Math.floor(totalSell * taxRate);
-      const fee = Math.max(minFee, Math.floor((totalBuy + totalSell) * 0.001425 * feeRate));
-      const profit = totalSell - totalBuy - tax - fee;
-      const returnRate = (profit / totalBuy * 100).toFixed(2);
+      const profit = totalSell - totalBuy - buyFee - sellFee - tax;
+      const returnRate = ((profit / totalBuy) * 100).toFixed(2);
 
-      const result = `損益：<span class="${profit >= 0 ? 'text-green-600' : 'text-red-600'}">${profit} 元</span>，報酬率：<span class="${profit >= 0 ? 'text-green-600' : 'text-red-600'}">${returnRate}%</span>`;
-      document.getElementById('st_result').innerHTML = result;
+      document.getElementById('stockResult').innerText =
+        `總損益：${profit} 元，報酬率：${returnRate}%`;
     }
   </script>
 </body>
