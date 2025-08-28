@@ -1,61 +1,131 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>損益試算平台</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>權證損益試算器</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body {
-      font-family: 'Noto Sans TC', sans-serif;
-    }
-    .tab-active {
-      background-color: #2563eb;
-      color: white;
-    }
-  </style>
 </head>
-<body class="bg-gradient-to-br from-blue-50 to-blue-100 min-h-screen p-4">
-  <div class="max-w-6xl mx-auto bg-white shadow-2xl rounded-2xl p-4">
-    <h1 class="text-3xl font-bold mb-4 text-center text-blue-800">損益試算平台</h1>
+<body class="bg-gradient-to-br from-yellow-50 to-yellow-100 min-h-screen p-4 sm:p-6">
+  <div class="max-w-4xl mx-auto bg-white shadow-2xl rounded-2xl p-4 sm:p-6">
+    <h1 class="text-2xl sm:text-3xl font-bold mb-6 text-center text-yellow-700">權證損益試算器</h1>
 
-    <!-- Tabs -->
-    <div class="flex justify-center space-x-4 mb-6">
-      <button class="tab-button bg-blue-100 hover:bg-blue-200 px-4 py-2 rounded" onclick="showTab('intraday')">當沖</button>
-      <button class="tab-button bg-green-100 hover:bg-green-200 px-4 py-2 rounded" onclick="showTab('stock')">個股</button>
-      <button class="tab-button bg-purple-100 hover:bg-purple-200 px-4 py-2 rounded" onclick="showTab('warrant')">權證</button>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+      <div>
+        <label class="block font-semibold text-gray-700 mb-1">標的現價</label>
+        <input type="number" id="underlyingPrice" class="w-full border rounded p-3" value="100" />
+      </div>
+      <div>
+        <label class="block font-semibold text-gray-700 mb-1">買入價格（權證）</label>
+        <input type="number" id="buyPrice" class="w-full border rounded p-3" value="1.5" />
+      </div>
+      <div>
+        <label class="block font-semibold text-gray-700 mb-1">張數</label>
+        <input type="number" id="shares" class="w-full border rounded p-3" value="10" />
+      </div>
+      <div>
+        <label class="block font-semibold text-gray-700 mb-1">手續費折數</label>
+        <input type="number" id="feeRate" class="w-full border rounded p-3" value="5" />
+      </div>
+      <div>
+        <label class="block font-semibold text-gray-700 mb-1">最低手續費（元）</label>
+        <input type="number" id="minFee" class="w-full border rounded p-3" value="20" />
+      </div>
+      <div>
+        <label class="block font-semibold text-gray-700 mb-1">履約比例（如0.2）</label>
+        <input type="number" id="ratio" step="0.01" class="w-full border rounded p-3" value="0.2" />
+      </div>
+      <div>
+        <label class="block font-semibold text-gray-700 mb-1">對應股數（股/張）</label>
+        <input type="number" id="conversion" class="w-full border rounded p-3" value="1000" />
+      </div>
     </div>
 
-    <!-- 當沖區塊 -->
-    <div id="tab-intraday" class="tab-content hidden">
-      <iframe src="your_intraday_calc.html" class="w-full h-[800px] border rounded-xl"></iframe>
+    <div class="text-center">
+      <button onclick="resetAndCalculate()" class="bg-yellow-500 text-white px-6 py-3 rounded hover:bg-yellow-600">開始試算</button>
     </div>
 
-    <!-- 個股區塊 -->
-    <div id="tab-stock" class="tab-content hidden">
-      <iframe src="your_stock_calc.html" class="w-full h-[800px] border rounded-xl"></iframe>
+    <div class="flex justify-center gap-4 mt-6">
+      <button onclick="showMore('up')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded">顯示更高價格</button>
+      <button onclick="showMore('down')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded">顯示更低價格</button>
     </div>
 
-    <!-- 權證區塊 -->
-    <div id="tab-warrant" class="tab-content hidden">
-      <iframe src="your_warrant_calc.html" class="w-full h-[800px] border rounded-xl"></iframe>
+    <div class="mt-8 overflow-x-auto">
+      <table class="min-w-full text-center border border-gray-300 rounded-xl">
+        <thead class="bg-yellow-200 text-yellow-800 text-sm sm:text-base">
+          <tr>
+            <th class="p-2">標的價格</th>
+            <th class="p-2">權證賣出價</th>
+            <th class="p-2">手續費</th>
+            <th class="p-2">損益</th>
+            <th class="p-2">報酬率</th>
+          </tr>
+        </thead>
+        <tbody id="resultTable" class="bg-white text-sm sm:text-base"></tbody>
+      </table>
     </div>
   </div>
 
   <script>
-    function showTab(tabName) {
-      const tabs = document.querySelectorAll('.tab-content');
-      const buttons = document.querySelectorAll('.tab-button');
-      tabs.forEach(tab => tab.classList.add('hidden'));
-      buttons.forEach(btn => btn.classList.remove('tab-active'));
+    let currentSteps = 10;
 
-      document.getElementById('tab-' + tabName).classList.remove('hidden');
-      event.target.classList.add('tab-active');
+    function getTickSize(price) {
+      if (price < 10) return 0.01;
+      if (price < 50) return 0.05;
+      if (price < 100) return 0.1;
+      if (price < 500) return 0.5;
+      if (price < 1000) return 1;
+      return 5;
     }
 
-    // 預設顯示第一個
-    window.onload = () => {
-      document.querySelector('.tab-button').click();
+    function resetAndCalculate() {
+      currentSteps = 10;
+      calculate();
+    }
+
+    function showMore(direction) {
+      currentSteps += 5;
+      calculate();
+    }
+
+    function calculate() {
+      const underlyingPrice = parseFloat(document.getElementById('underlyingPrice').value);
+      const buyPrice = parseFloat(document.getElementById('buyPrice').value);
+      const shares = parseInt(document.getElementById('shares').value);
+      const feeRate = parseFloat(document.getElementById('feeRate').value) / 10;
+      const minFee = parseInt(document.getElementById('minFee').value);
+      const ratio = parseFloat(document.getElementById('ratio').value);
+      const conversion = parseInt(document.getElementById('conversion').value);
+
+      const cost = buyPrice * shares * conversion;
+      const feeBuy = Math.max(minFee, Math.floor(cost * 0.001425 * feeRate));
+      const totalBuy = cost + feeBuy;
+
+      const resultTable = document.getElementById('resultTable');
+      resultTable.innerHTML = '';
+
+      const tick = getTickSize(underlyingPrice);
+      let priceSteps = [];
+
+      for (let i = -currentSteps; i <= currentSteps; i++) {
+        const newUnderlying = +(underlyingPrice + i * tick).toFixed(2);
+        const warrantSellPrice = ((newUnderlying - underlyingPrice) * ratio + buyPrice).toFixed(2);
+        const revenue = warrantSellPrice * shares * conversion;
+        const feeSell = Math.max(minFee, Math.floor(revenue * 0.001425 * feeRate));
+        const totalSell = revenue - feeSell;
+        const profit = totalSell - totalBuy;
+        const returnRate = ((profit / totalBuy) * 100).toFixed(2);
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td class="p-2">${newUnderlying}</td>
+          <td class="p-2">${warrantSellPrice}</td>
+          <td class="p-2">${feeBuy + feeSell}</td>
+          <td class="p-2 ${profit >= 0 ? 'text-green-600' : 'text-red-600'}">${profit.toFixed(0)}</td>
+          <td class="p-2 ${profit >= 0 ? 'text-green-600' : 'text-red-600'}">${returnRate}%</td>
+        `;
+        resultTable.appendChild(row);
+      }
     }
   </script>
 </body>
