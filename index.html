@@ -1,143 +1,129 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>損益試算器</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body {
-      font-family: 'Noto Sans TC', sans-serif;
-    }
-  </style>
-</head>
-<body class="bg-gradient-to-br from-blue-50 to-blue-100 min-h-screen p-4 sm:p-6">
-  <div class="max-w-5xl mx-auto bg-white shadow-2xl rounded-2xl p-4 sm:p-6">
-    <h1 class="text-2xl sm:text-3xl font-bold mb-6 text-center text-blue-800">損益試算器</h1>
+import React, { useState } from "react";
+import { Tabs, Tab, Card, CardContent, Input, Button, Label, Select, Table, TableHead, TableRow, TableHeaderCell, TableBody, TableCell } from "@/components/ui";
 
-    <!-- 分頁選單 -->
-    <div class="flex justify-center mb-6">
-      <button id="tabDayTrade" onclick="switchTab('dayTrade')" class="tab-btn bg-blue-500 text-white px-4 py-2 rounded-l">當沖</button>
-      <button id="tabRegular" onclick="switchTab('regular')" class="tab-btn bg-gray-200 text-gray-800 px-4 py-2 rounded-r">個股</button>
-    </div>
+const calculateResults = (buyPrice, sellPrice, shares, feeRate, minFee, taxRate, feeDiscount) => {
+  const results = [];
+  for (let price = sellPrice + 5; price >= sellPrice - 5; price -= 0.5) {
+    const tradeTax = Math.floor(price * shares * (taxRate / 100));
+    const tradeFee = Math.max((price * shares * (feeRate / 1000) * (feeDiscount / 10)).toFixed(0), minFee);
+    const totalBuyCost = buyPrice * shares + parseFloat(tradeFee);
+    const totalSell = price * shares - tradeTax - parseFloat(tradeFee);
+    const profit = totalSell - totalBuyCost;
+    const returnRate = ((profit / totalBuyCost) * 100).toFixed(2);
+    results.push({
+      buy: buyPrice,
+      sell: price,
+      tax: tradeTax,
+      fee: tradeFee,
+      profit: profit.toFixed(0),
+      returnRate: `${returnRate}%`,
+    });
+  }
+  return results;
+};
 
-    <!-- 當沖內容 -->
-    <div id="content-dayTrade">
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        <div><label class="block font-semibold text-gray-700 mb-1">買入價格</label><input type="number" id="buyPrice" class="w-full border rounded p-3" value="100"></div>
-        <div><label class="block font-semibold text-gray-700 mb-1">股數</label><input type="number" id="shares" class="w-full border rounded p-3" value="1000"></div>
-        <div><label class="block font-semibold text-gray-700 mb-1">手續費折數</label><input type="number" id="feeRate" class="w-full border rounded p-3" value="5"></div>
-        <div><label class="block font-semibold text-gray-700 mb-1">最低手續費（元）</label><input type="number" id="minFee" class="w-full border rounded p-3" value="20"></div>
-        <div><label class="block font-semibold text-gray-700 mb-1">交易稅率（%）</label><input type="number" id="taxRate" class="w-full border rounded p-3" value="0.15"></div>
-        <div><label class="block font-semibold text-gray-700 mb-1">交易方向</label>
-          <select id="direction" class="w-full border rounded p-3">
-            <option value="long" selected>作多</option>
-            <option value="short">作空</option>
-          </select>
+export default function ProfitCalculator() {
+  const [activeTab, setActiveTab] = useState("daytrade");
+  const [inputs, setInputs] = useState({
+    buyPrice: "103",
+    sellPrice: "108",
+    shares: "1000",
+    feeRate: "1.425",
+    minFee: "20",
+    taxRate: "0.3",
+    feeDiscount: "10",
+  });
+  const [results, setResults] = useState([]);
+
+  const handleInputChange = (e) => {
+    setInputs({ ...inputs, [e.target.name]: e.target.value });
+  };
+
+  const handleCalculate = () => {
+    const res = calculateResults(
+      parseFloat(inputs.buyPrice),
+      parseFloat(inputs.sellPrice),
+      parseInt(inputs.shares),
+      parseFloat(inputs.feeRate),
+      parseInt(inputs.minFee),
+      parseFloat(inputs.taxRate),
+      parseFloat(inputs.feeDiscount)
+    );
+    setResults(res);
+  };
+
+  return (
+    <div className="p-6 max-w-4xl mx-auto">
+      <h1 className="text-2xl font-bold text-center mb-4">損益試算器</h1>
+      <Tabs defaultValue="daytrade" className="w-full mb-6">
+        <Tab value="daytrade" onClick={() => setActiveTab("daytrade")} className={activeTab === "daytrade" ? "bg-blue-500 text-white" : "bg-gray-200"}>當沖試算</Tab>
+        <Tab value="stock" onClick={() => setActiveTab("stock")} className={activeTab === "stock" ? "bg-blue-500 text-white" : "bg-gray-200"}>股票試算</Tab>
+      </Tabs>
+
+      <Card>
+        <CardContent className="grid grid-cols-2 gap-4">
+          <div>
+            <Label>買入價格</Label>
+            <Input name="buyPrice" value={inputs.buyPrice} onChange={handleInputChange} />
+          </div>
+          <div>
+            <Label>賣出價格</Label>
+            <Input name="sellPrice" value={inputs.sellPrice} onChange={handleInputChange} />
+          </div>
+          <div>
+            <Label>股數</Label>
+            <Input name="shares" value={inputs.shares} onChange={handleInputChange} />
+          </div>
+          <div>
+            <Label>手續費率（千分之）</Label>
+            <Input name="feeRate" value={inputs.feeRate} onChange={handleInputChange} />
+          </div>
+          <div>
+            <Label>最低手續費（元）</Label>
+            <Input name="minFee" value={inputs.minFee} onChange={handleInputChange} />
+          </div>
+          <div>
+            <Label>交易稅率（%）</Label>
+            <Input name="taxRate" value={inputs.taxRate} onChange={handleInputChange} />
+          </div>
+          <div>
+            <Label>手續費折數</Label>
+            <Input name="feeDiscount" value={inputs.feeDiscount} onChange={handleInputChange} />
+          </div>
+        </CardContent>
+        <CardContent>
+          <Button className="mt-4" onClick={handleCalculate}>開始試算</Button>
+        </CardContent>
+      </Card>
+
+      {results.length > 0 && (
+        <div className="mt-8">
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableHeaderCell>買入價</TableHeaderCell>
+                <TableHeaderCell>賣出價</TableHeaderCell>
+                <TableHeaderCell>交易稅</TableHeaderCell>
+                <TableHeaderCell>手續費</TableHeaderCell>
+                <TableHeaderCell>損益</TableHeaderCell>
+                <TableHeaderCell>報酬率</TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {results.map((row, index) => (
+                <TableRow key={index}>
+                  <TableCell>{row.buy}</TableCell>
+                  <TableCell>{row.sell}</TableCell>
+                  <TableCell>{row.tax}</TableCell>
+                  <TableCell>{row.fee}</TableCell>
+                  <TableCell className={parseInt(row.profit) >= 0 ? "text-green-600" : "text-red-600"}>{row.profit}</TableCell>
+                  <TableCell className={row.returnRate.startsWith("-") ? "text-red-600" : "text-green-600"}>{row.returnRate}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
-      </div>
-
-      <div class="text-center">
-        <button onclick="resetAndCalculate()" class="bg-blue-600 text-white text-lg px-6 py-3 rounded hover:bg-blue-700 w-full sm:w-auto">開始試算</button>
-      </div>
-
-      <!-- 顯示更多按鈕 -->
-      <div class="flex justify-center gap-4 mt-6">
-        <button onclick="showMore('up')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded">顯示更高價格</button>
-        <button onclick="showMore('down')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded">顯示更低價格</button>
-      </div>
-
-      <!-- 當沖結果表格 -->
-      <div class="mt-8 overflow-x-auto">
-        <table class="min-w-full text-center border border-gray-300 rounded-xl">
-          <thead class="bg-blue-200 text-blue-800 text-sm sm:text-base">
-            <tr><th class="p-2">買入價</th><th class="p-2">賣出價</th><th class="p-2">交易稅</th><th class="p-2">手續費</th><th class="p-2">損益</th><th class="p-2">報酬率</th></tr>
-          </thead>
-          <tbody id="resultTable" class="bg-white text-sm sm:text-base"></tbody>
-        </table>
-      </div>
+      )}
     </div>
-
-    <!-- 個股內容 -->
-    <div id="content-regular" class="hidden">
-      <p class="text-center text-gray-600 text-sm">（個股損益試算器內容待補完，包含圖表與表格）</p>
-      <div class="mt-4 text-center">
-        <button onclick="alert('個股損益功能尚在建構中')" class="bg-green-600 text-white text-lg px-6 py-3 rounded hover:bg-green-700">即將推出</button>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    let currentSteps = 10;
-    function getTickSize(price) {
-      if (price < 10) return 0.01;
-      if (price < 50) return 0.05;
-      if (price < 100) return 0.1;
-      if (price < 500) return 0.5;
-      if (price < 1000) return 1;
-      return 5;
-    }
-
-    function resetAndCalculate() {
-      currentSteps = 10;
-      calculate();
-    }
-
-    function showMore() {
-      currentSteps += 5;
-      calculate();
-    }
-
-    function calculate() {
-      const buy = parseFloat(document.getElementById('buyPrice').value);
-      const shares = parseInt(document.getElementById('shares').value);
-      const feeRate = parseFloat(document.getElementById('feeRate').value) / 10;
-      const minFee = parseInt(document.getElementById('minFee').value);
-      const taxRate = parseFloat(document.getElementById('taxRate').value) / 100;
-      const direction = document.getElementById('direction').value;
-      const tick = getTickSize(buy);
-      const resultTable = document.getElementById('resultTable');
-      resultTable.innerHTML = '';
-      let priceSteps = [];
-      for (let i = -currentSteps; i <= currentSteps; i++) {
-        let sell = +(buy + i * tick).toFixed(2);
-        if (direction === 'short') sell = +(buy - i * tick).toFixed(2);
-        priceSteps.push(sell);
-      }
-      if (direction === 'long') priceSteps.reverse();
-      for (let sell of priceSteps) {
-        const totalBuy = buy * shares;
-        const totalSell = sell * shares;
-        const tax = Math.floor(totalSell * taxRate);
-        const fee = Math.max(minFee, Math.floor((totalBuy + totalSell) * 0.001425 * feeRate));
-        const profit = direction === 'long' ? (totalSell - totalBuy - tax - fee) : (totalBuy - totalSell - tax - fee);
-        const returnRate = (profit / totalBuy * 100).toFixed(2);
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td class="p-2">${buy}</td>
-          <td class="p-2">${sell}</td>
-          <td class="p-2">${tax}</td>
-          <td class="p-2">${fee}</td>
-          <td class="p-2 ${profit >= 0 ? 'text-green-600' : 'text-red-600'}">${profit}</td>
-          <td class="p-2 ${profit >= 0 ? 'text-green-600' : 'text-red-600'}">${returnRate}%</td>
-        `;
-        resultTable.appendChild(row);
-      }
-    }
-
-    function switchTab(tab) {
-      document.getElementById('content-dayTrade').classList.add('hidden');
-      document.getElementById('content-regular').classList.add('hidden');
-      document.getElementById('tabDayTrade').classList.remove('bg-blue-500', 'text-white');
-      document.getElementById('tabRegular').classList.remove('bg-blue-500', 'text-white');
-      if (tab === 'dayTrade') {
-        document.getElementById('content-dayTrade').classList.remove('hidden');
-        document.getElementById('tabDayTrade').classList.add('bg-blue-500', 'text-white');
-      } else {
-        document.getElementById('content-regular').classList.remove('hidden');
-        document.getElementById('tabRegular').classList.add('bg-blue-500', 'text-white');
-      }
-    }
-  </script>
-</body>
-</html>
+  );
+}
