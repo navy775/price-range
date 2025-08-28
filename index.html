@@ -1,129 +1,162 @@
-import React, { useState } from "react";
-import { Tabs, Tab, Card, CardContent, Input, Button, Label, Select, Table, TableHead, TableRow, TableHeaderCell, TableBody, TableCell } from "@/components/ui";
-
-const calculateResults = (buyPrice, sellPrice, shares, feeRate, minFee, taxRate, feeDiscount) => {
-  const results = [];
-  for (let price = sellPrice + 5; price >= sellPrice - 5; price -= 0.5) {
-    const tradeTax = Math.floor(price * shares * (taxRate / 100));
-    const tradeFee = Math.max((price * shares * (feeRate / 1000) * (feeDiscount / 10)).toFixed(0), minFee);
-    const totalBuyCost = buyPrice * shares + parseFloat(tradeFee);
-    const totalSell = price * shares - tradeTax - parseFloat(tradeFee);
-    const profit = totalSell - totalBuyCost;
-    const returnRate = ((profit / totalBuyCost) * 100).toFixed(2);
-    results.push({
-      buy: buyPrice,
-      sell: price,
-      tax: tradeTax,
-      fee: tradeFee,
-      profit: profit.toFixed(0),
-      returnRate: `${returnRate}%`,
-    });
-  }
-  return results;
-};
-
-export default function ProfitCalculator() {
-  const [activeTab, setActiveTab] = useState("daytrade");
-  const [inputs, setInputs] = useState({
-    buyPrice: "103",
-    sellPrice: "108",
-    shares: "1000",
-    feeRate: "1.425",
-    minFee: "20",
-    taxRate: "0.3",
-    feeDiscount: "10",
-  });
-  const [results, setResults] = useState([]);
-
-  const handleInputChange = (e) => {
-    setInputs({ ...inputs, [e.target.name]: e.target.value });
-  };
-
-  const handleCalculate = () => {
-    const res = calculateResults(
-      parseFloat(inputs.buyPrice),
-      parseFloat(inputs.sellPrice),
-      parseInt(inputs.shares),
-      parseFloat(inputs.feeRate),
-      parseInt(inputs.minFee),
-      parseFloat(inputs.taxRate),
-      parseFloat(inputs.feeDiscount)
-    );
-    setResults(res);
-  };
-
-  return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold text-center mb-4">損益試算器</h1>
-      <Tabs defaultValue="daytrade" className="w-full mb-6">
-        <Tab value="daytrade" onClick={() => setActiveTab("daytrade")} className={activeTab === "daytrade" ? "bg-blue-500 text-white" : "bg-gray-200"}>當沖試算</Tab>
-        <Tab value="stock" onClick={() => setActiveTab("stock")} className={activeTab === "stock" ? "bg-blue-500 text-white" : "bg-gray-200"}>股票試算</Tab>
-      </Tabs>
-
-      <Card>
-        <CardContent className="grid grid-cols-2 gap-4">
-          <div>
-            <Label>買入價格</Label>
-            <Input name="buyPrice" value={inputs.buyPrice} onChange={handleInputChange} />
-          </div>
-          <div>
-            <Label>賣出價格</Label>
-            <Input name="sellPrice" value={inputs.sellPrice} onChange={handleInputChange} />
-          </div>
-          <div>
-            <Label>股數</Label>
-            <Input name="shares" value={inputs.shares} onChange={handleInputChange} />
-          </div>
-          <div>
-            <Label>手續費率（千分之）</Label>
-            <Input name="feeRate" value={inputs.feeRate} onChange={handleInputChange} />
-          </div>
-          <div>
-            <Label>最低手續費（元）</Label>
-            <Input name="minFee" value={inputs.minFee} onChange={handleInputChange} />
-          </div>
-          <div>
-            <Label>交易稅率（%）</Label>
-            <Input name="taxRate" value={inputs.taxRate} onChange={handleInputChange} />
-          </div>
-          <div>
-            <Label>手續費折數</Label>
-            <Input name="feeDiscount" value={inputs.feeDiscount} onChange={handleInputChange} />
-          </div>
-        </CardContent>
-        <CardContent>
-          <Button className="mt-4" onClick={handleCalculate}>開始試算</Button>
-        </CardContent>
-      </Card>
-
-      {results.length > 0 && (
-        <div className="mt-8">
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableHeaderCell>買入價</TableHeaderCell>
-                <TableHeaderCell>賣出價</TableHeaderCell>
-                <TableHeaderCell>交易稅</TableHeaderCell>
-                <TableHeaderCell>手續費</TableHeaderCell>
-                <TableHeaderCell>損益</TableHeaderCell>
-                <TableHeaderCell>報酬率</TableHeaderCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {results.map((row, index) => (
-                <TableRow key={index}>
-                  <TableCell>{row.buy}</TableCell>
-                  <TableCell>{row.sell}</TableCell>
-                  <TableCell>{row.tax}</TableCell>
-                  <TableCell>{row.fee}</TableCell>
-                  <TableCell className={parseInt(row.profit) >= 0 ? "text-green-600" : "text-red-600"}>{row.profit}</TableCell>
-                  <TableCell className={row.returnRate.startsWith("-") ? "text-red-600" : "text-green-600"}>{row.returnRate}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>損益試算器</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: #e6f0ff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .tab-button {
+      margin: 0 5px;
+      min-width: 120px;
+    }
+    .active-tab {
+      background-color: #0d6efd !important;
+      color: white !important;
+    }
+    .table td, .table th {
+      text-align: center;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body class="p-4">
+  <div class="container bg-white rounded shadow p-4">
+    <h2 class="text-center fw-bold">損益試算器</h2>
+    <div class="text-center my-3">
+      <button class="btn btn-primary tab-button" id="btnIntraday" onclick="switchTab('intraday')">當沖試算</button>
+      <button class="btn btn-secondary tab-button" id="btnStock" onclick="switchTab('stock')">股票試算</button>
     </div>
-  );
-}
+    <div id="formArea"></div>
+    <div class="mt-4" id="resultArea"></div>
+    <canvas id="resultChart" height="200" class="mt-4"></canvas>
+  </div>
+
+  <script>
+    let activeTab = 'intraday';
+
+    function switchTab(tab) {
+      activeTab = tab;
+      document.getElementById('btnIntraday').classList.toggle('active-tab', tab === 'intraday');
+      document.getElementById('btnStock').classList.toggle('active-tab', tab === 'stock');
+      renderForm();
+      document.getElementById('resultArea').innerHTML = '';
+      document.getElementById('resultChart').style.display = 'none';
+    }
+
+    function renderForm() {
+      const formArea = document.getElementById('formArea');
+      formArea.innerHTML = `
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">買入價格</label>
+            <input type="number" id="buyPrice" class="form-control" value="100" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">賣出價格</label>
+            <input type="number" id="sellPrice" class="form-control" value="110" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">股數</label>
+            <input type="number" id="quantity" class="form-control" value="1000" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">手續費折數</label>
+            <input type="number" id="discountRate" class="form-control" value="5" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">最低手續費（元）</label>
+            <input type="number" id="minFee" class="form-control" value="20" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">交易稅率 (%)</label>
+            <input type="number" id="taxRate" class="form-control" value="${activeTab === 'intraday' ? '0.15' : '0.3'}" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">交易方向</label>
+            <select id="direction" class="form-select">
+              <option value="long">作多</option>
+              <option value="short">作空</option>
+            </select>
+          </div>
+        </div>
+        <div class="text-center mt-3">
+          <button class="btn btn-success" onclick="calculate()">開始試算</button>
+        </div>
+      `;
+    }
+
+    function calculate() {
+      const buyPrice = parseFloat(document.getElementById('buyPrice').value);
+      const sellPrice = parseFloat(document.getElementById('sellPrice').value);
+      const quantity = parseInt(document.getElementById('quantity').value);
+      const discountRate = parseFloat(document.getElementById('discountRate').value);
+      const minFee = parseFloat(document.getElementById('minFee').value);
+      const taxRate = parseFloat(document.getElementById('taxRate').value);
+      const direction = document.getElementById('direction').value;
+
+      let results = [];
+      for (let i = sellPrice + 5; i >= sellPrice - 5; i -= 0.5) {
+        const sell = parseFloat(i.toFixed(2));
+        const priceDiff = (direction === 'long' ? sell - buyPrice : buyPrice - sell);
+        const turnover = (buyPrice + sell) * quantity;
+        const fee = Math.max(minFee, (turnover * (discountRate / 1000)));
+        const tax = (direction === 'long') ? sell * quantity * (taxRate / 100) : 0;
+        const profit = priceDiff * quantity - fee - tax;
+        const roi = (profit / (buyPrice * quantity)) * 100;
+
+        results.push({
+          sellPrice: sell,
+          profit: Math.round(profit),
+          roi: roi.toFixed(2)
+        });
+      }
+      renderResult(results);
+    }
+
+    function renderResult(data) {
+      const resultArea = document.getElementById('resultArea');
+      let html = `
+        <table class="table table-bordered">
+          <thead class="table-light">
+            <tr><th>賣出價</th><th>損益</th><th>報酬率</th></tr>
+          </thead>
+          <tbody>
+            ${data.map(row => `
+              <tr>
+                <td>${row.sellPrice}</td>
+                <td style="color:${row.profit >= 0 ? 'green' : 'red'}">${row.profit}</td>
+                <td style="color:${row.profit >= 0 ? 'green' : 'red'}">${row.roi}%</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      `;
+      resultArea.innerHTML = html;
+
+      const ctx = document.getElementById('resultChart').getContext('2d');
+      document.getElementById('resultChart').style.display = 'block';
+      if (window.chart) window.chart.destroy();
+      window.chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: data.map(r => r.sellPrice),
+          datasets: [{
+            label: '損益變化',
+            data: data.map(r => r.profit),
+            borderColor: 'blue',
+            fill: false,
+            tension: 0.2
+          }]
+        }
+      });
+    }
+
+    renderForm();
+  </script>
+</body>
+</html>
