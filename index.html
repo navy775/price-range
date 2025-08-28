@@ -3,30 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>股票損益試算器</title>
+  <title>損益試算器</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body {
-      font-family: 'Noto Sans TC', sans-serif;
-    }
-    .tab-active {
-      background-color: #2563eb;
-      color: white;
-    }
-  </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-blue-100 min-h-screen p-4 sm:p-6">
-  <div class="max-w-5xl mx-auto bg-white shadow-2xl rounded-2xl p-4 sm:p-6">
-    <h1 class="text-3xl font-bold mb-6 text-center text-blue-800">股票損益試算器</h1>
-
-    <!-- 分頁選單 -->
-    <div class="flex justify-center mb-6 space-x-4">
-      <button id="btnDayTrade" class="tab-btn tab-active px-6 py-2 rounded-full font-semibold" onclick="switchTab('dayTrade')">當沖試算</button>
-      <button id="btnRegularTrade" class="tab-btn px-6 py-2 rounded-full font-semibold bg-gray-200" onclick="switchTab('regularTrade')">個股試算</button>
+  <div class="max-w-4xl mx-auto bg-white shadow-2xl rounded-2xl p-4 sm:p-6">
+    <div class="flex justify-between mb-6">
+      <h1 class="text-2xl sm:text-3xl font-bold text-blue-800">損益試算器</h1>
+      <div>
+        <button id="btnDayTrade" onclick="switchMode('day')" class="px-4 py-2 bg-blue-600 text-white rounded-lg mr-2">當沖</button>
+        <button id="btnStock" onclick="switchMode('stock')" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg">個股</button>
+      </div>
     </div>
 
-    <!-- 表單內容（共用） -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+    <!-- 表單區塊 -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
       <div>
         <label class="block font-semibold text-gray-700 mb-1">買入價格</label>
         <input type="number" id="buyPrice" class="w-full border rounded p-3" value="100">
@@ -45,7 +36,7 @@
       </div>
       <div>
         <label class="block font-semibold text-gray-700 mb-1">交易稅率（%）</label>
-        <input type="number" id="taxRate" class="w-full border rounded p-3" value="0.3">
+        <input type="number" id="taxRate" class="w-full border rounded p-3" value="0.15">
       </div>
       <div>
         <label class="block font-semibold text-gray-700 mb-1">交易方向</label>
@@ -56,18 +47,19 @@
       </div>
     </div>
 
-    <div class="text-center my-4">
+    <!-- 操作按鈕 -->
+    <div class="text-center mb-6">
       <button onclick="resetAndCalculate()" class="bg-blue-600 text-white text-lg px-6 py-3 rounded hover:bg-blue-700 w-full sm:w-auto">開始試算</button>
     </div>
 
-    <!-- 顯示更多 -->
-    <div class="flex justify-center gap-4 my-4">
+    <!-- 顯示更多按鈕 -->
+    <div class="flex justify-center gap-4 mb-6">
       <button onclick="showMore('up')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded">顯示更高價格</button>
       <button onclick="showMore('down')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded">顯示更低價格</button>
     </div>
 
     <!-- 結果表格 -->
-    <div class="mt-6 overflow-x-auto">
+    <div class="overflow-x-auto">
       <table class="min-w-full text-center border border-gray-300 rounded-xl">
         <thead class="bg-blue-200 text-blue-800 text-sm sm:text-base">
           <tr>
@@ -86,7 +78,7 @@
 
   <script>
     let currentSteps = 10;
-    let currentTab = 'dayTrade';
+    let mode = 'day';
 
     function getTickSize(price) {
       if (price < 10) return 0.01;
@@ -97,13 +89,6 @@
       return 5;
     }
 
-    function switchTab(tab) {
-      currentTab = tab;
-      document.getElementById("btnDayTrade").classList.toggle("tab-active", tab === 'dayTrade');
-      document.getElementById("btnRegularTrade").classList.toggle("tab-active", tab === 'regularTrade');
-      resetAndCalculate();
-    }
-
     function resetAndCalculate() {
       currentSteps = 10;
       calculate();
@@ -112,6 +97,24 @@
     function showMore(direction) {
       currentSteps += 5;
       calculate();
+    }
+
+    function switchMode(newMode) {
+      mode = newMode;
+      document.getElementById('btnDayTrade').classList.toggle('bg-blue-600', mode === 'day');
+      document.getElementById('btnDayTrade').classList.toggle('bg-gray-300', mode !== 'day');
+      document.getElementById('btnDayTrade').classList.toggle('text-white', mode === 'day');
+      document.getElementById('btnDayTrade').classList.toggle('text-gray-800', mode !== 'day');
+
+      document.getElementById('btnStock').classList.toggle('bg-blue-600', mode === 'stock');
+      document.getElementById('btnStock').classList.toggle('bg-gray-300', mode !== 'stock');
+      document.getElementById('btnStock').classList.toggle('text-white', mode === 'stock');
+      document.getElementById('btnStock').classList.toggle('text-gray-800', mode !== 'stock');
+
+      // 修改預設交易稅率
+      document.getElementById('taxRate').value = (mode === 'stock') ? 0.3 : 0.15;
+
+      resetAndCalculate();
     }
 
     function calculate() {
@@ -138,24 +141,13 @@
       for (let sell of priceSteps) {
         const totalBuy = buy * shares;
         const totalSell = sell * shares;
-
-        let fee, tax, profit;
-
-        if (currentTab === 'dayTrade') {
-          tax = Math.floor(totalSell * taxRate);
-          fee = Math.max(minFee, Math.floor((totalBuy + totalSell) * 0.001425 * feeRate));
-          profit = direction === 'long'
-            ? (totalSell - totalBuy - tax - fee)
-            : (totalBuy - totalSell - tax - fee);
-        } else { // 個股
-          const buyFee = Math.max(minFee, Math.floor(totalBuy * 0.001425 * feeRate));
-          const sellFee = Math.max(minFee, Math.floor(totalSell * 0.001425 * feeRate));
-          tax = Math.floor(totalSell * taxRate);
-          fee = buyFee + sellFee;
-          profit = totalSell - totalBuy - fee - tax;
-        }
-
+        const tax = Math.floor(totalSell * taxRate);
+        const fee = Math.max(minFee, Math.floor((totalBuy + totalSell) * 0.001425 * feeRate));
+        const profit = direction === 'long'
+          ? (totalSell - totalBuy - tax - fee)
+          : (totalBuy - totalSell - tax - fee);
         const returnRate = (profit / totalBuy * 100).toFixed(2);
+
         const row = document.createElement('tr');
         row.innerHTML = `
           <td class="p-2">${buy}</td>
@@ -169,7 +161,10 @@
       }
     }
 
-    window.onload = calculate;
+    // 預設先算一次
+    window.onload = () => {
+      resetAndCalculate();
+    };
   </script>
 </body>
 </html>
