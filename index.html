@@ -10,45 +10,41 @@
       font-family: 'Noto Sans TC', sans-serif;
     }
     .tab-button {
-      @apply px-4 py-2 rounded-t-lg font-bold border border-b-0 transition-all duration-300 shadow-md;
+      @apply px-4 py-2 font-bold rounded-lg border shadow bg-gray-100 hover:bg-blue-100 transition;
     }
     .tab-button.active {
-      @apply bg-blue-600 text-white shadow-inner;
-    }
-    .tab-button.inactive {
-      @apply bg-white text-blue-600 hover:bg-blue-100;
+      @apply bg-blue-600 text-white shadow-lg;
     }
   </style>
 </head>
-<body class="bg-blue-50 min-h-screen p-6">
-  <div class="max-w-6xl mx-auto bg-white shadow-2xl rounded-xl overflow-hidden">
-    <h1 class="text-3xl text-center text-blue-700 font-extrabold py-6 border-b bg-blue-100">股票試算工具</h1>
-    <div class="flex justify-center space-x-2 bg-white border-b p-4">
+<body class="bg-blue-50 p-6 min-h-screen">
+  <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-xl p-6">
+    <h1 class="text-3xl font-bold text-center text-blue-700 mb-6">股票交易損益試算器</h1>
+    <div class="flex flex-wrap justify-center gap-4 border-b pb-4">
       <button class="tab-button active" onclick="switchTab('intraday')">當沖</button>
-      <button class="tab-button inactive" onclick="switchTab('stock')">個股</button>
-      <button class="tab-button inactive" onclick="switchTab('warrant')">權證</button>
-      <button class="tab-button inactive" onclick="switchTab('oddlot')">零股</button>
+      <button class="tab-button" onclick="switchTab('stock')">個股</button>
+      <button class="tab-button" onclick="switchTab('warrant')">權證</button>
+      <button class="tab-button" onclick="switchTab('odd')">零股</button>
     </div>
 
     <div id="intraday" class="tab-content p-4"></div>
     <div id="stock" class="tab-content p-4 hidden"></div>
     <div id="warrant" class="tab-content p-4 hidden"></div>
-    <div id="oddlot" class="tab-content p-4 hidden"></div>
+    <div id="odd" class="tab-content p-4 hidden"></div>
   </div>
 
   <script>
-    const tabs = ["intraday", "stock", "warrant", "oddlot"];
-    const currentSteps = { intraday: 10, stock: 10, warrant: 10, oddlot: 10 };
+    const tabs = ["intraday", "stock", "warrant", "odd"];
+    const currentSteps = { intraday: 10, stock: 10, warrant: 10, odd: 10 };
 
     function switchTab(tabId) {
       tabs.forEach(id => {
         document.getElementById(id).classList.add("hidden");
-        document.querySelector(`.tab-button[onclick="switchTab('${id}')"]`).classList.remove("active");
-        document.querySelector(`.tab-button[onclick="switchTab('${id}')"]`).classList.add("inactive");
+        const btn = document.querySelector(`button[onclick="switchTab('${id}')"]`);
+        btn.classList.remove("active");
       });
       document.getElementById(tabId).classList.remove("hidden");
-      document.querySelector(`.tab-button[onclick="switchTab('${tabId}')"]`).classList.remove("inactive");
-      document.querySelector(`.tab-button[onclick="switchTab('${tabId}')"]`).classList.add("active");
+      document.querySelector(`button[onclick="switchTab('${tabId}')"]`).classList.add("active");
       if (!document.getElementById(tabId).hasChildNodes()) renderCalculator(tabId);
     }
 
@@ -62,15 +58,17 @@
     }
 
     function renderCalculator(type) {
-      const taxDefault = (type === 'warrant') ? 0.1 : (type === 'intraday' ? 0.15 : 0.3);
+      const defaultTax = type === "intraday" ? 0.15 : (type === "warrant" ? 0.1 : 0.3);
+      const defaultMin = type === "odd" ? 1 : 20;
+
       const container = document.getElementById(type);
       container.innerHTML = `
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
           <div><label>買入價格</label><input type="number" id="${type}_buy" class="w-full border p-2" value="100"></div>
           <div><label>股數</label><input type="number" id="${type}_shares" class="w-full border p-2" value="1000"></div>
           <div><label>手續費折數（輸入 5 代表五折）</label><input type="number" id="${type}_fee" class="w-full border p-2" value="5"></div>
-          <div><label>最低手續費</label><input type="number" id="${type}_min" class="w-full border p-2" value="20"></div>
-          <div><label>交易稅率（%）</label><input type="number" id="${type}_tax" class="w-full border p-2" value="${taxDefault}"></div>
+          <div><label>最低手續費</label><input type="number" id="${type}_min" class="w-full border p-2" value="${defaultMin}"></div>
+          <div><label>交易稅率（%）</label><input type="number" id="${type}_tax" class="w-full border p-2" value="${defaultTax}"></div>
           <div><label>交易方向</label>
             <select id="${type}_dir" class="w-full border p-2">
               <option value="long">作多</option>
@@ -79,7 +77,7 @@
           </div>
         </div>
         <div class="text-center">
-          <button onclick="resetCalc('${type}')" class="bg-blue-600 text-white px-6 py-2 rounded shadow-md hover:bg-blue-700">開始試算</button>
+          <button onclick="resetCalc('${type}')" class="bg-blue-600 text-white px-6 py-2 rounded">開始試算</button>
         </div>
         <div class="flex justify-center gap-4 mt-4">
           <button onclick="showMore('${type}', 'up')" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded">顯示更高價格</button>
@@ -109,7 +107,7 @@
       calculate(type);
     }
 
-    function showMore(type, direction) {
+    function showMore(type, dir) {
       currentSteps[type] += 5;
       calculate(type);
     }
@@ -157,8 +155,7 @@
       }
     }
 
-    // 預設載入當沖試算器
-    renderCalculator("intraday");
+    window.onload = () => renderCalculator("intraday");
   </script>
 </body>
 </html>
