@@ -1,17 +1,19 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>股票損益試算器</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>股票試算工具</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { font-family: 'Noto Sans TC', sans-serif; }
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+    }
     .tab-button {
-      @apply px-4 py-2 font-bold rounded-t-lg border border-b-0 transition-all;
+      @apply px-4 py-2 font-bold rounded-t-lg border border-b-0 transition;
     }
     .tab-button.active {
-      @apply bg-blue-600 text-white ring-2 ring-blue-500;
+      @apply bg-blue-600 text-white shadow-lg;
     }
     .tab-button.inactive {
       @apply bg-gray-100 text-gray-600 hover:bg-gray-200;
@@ -20,20 +22,21 @@
 </head>
 <body class="bg-blue-50 p-4 min-h-screen">
   <div class="max-w-6xl mx-auto bg-white shadow-2xl rounded-xl">
-    <h1 class="text-2xl font-bold text-center pt-6">股票損益試算器</h1>
-    <div class="flex justify-center space-x-4 border-b p-4">
-      <button class="tab-button active" onclick="switchTab('intraday')">當沖</button>
-      <button class="tab-button inactive" onclick="switchTab('stock')">個股</button>
-      <button class="tab-button inactive" onclick="switchTab('warrant')">權證</button>
+    <div class="flex justify-center space-x-2 border-b p-4">
+      <button class="tab-button active" onclick="switchTab('intraday')">當沖試算器</button>
+      <button class="tab-button inactive" onclick="switchTab('stock')">個股試算器</button>
+      <button class="tab-button inactive" onclick="switchTab('warrant')">權證試算器</button>
+      <button class="tab-button inactive" onclick="switchTab('odd')">零股試算器</button>
     </div>
 
     <div id="intraday" class="tab-content p-4"></div>
     <div id="stock" class="tab-content p-4 hidden"></div>
     <div id="warrant" class="tab-content p-4 hidden"></div>
+    <div id="odd" class="tab-content p-4 hidden"></div>
   </div>
 
   <script>
-    const tabs = ["intraday", "stock", "warrant"];
+    const tabs = ["intraday", "stock", "warrant", "odd"];
     const tabButtons = document.querySelectorAll(".tab-button");
 
     function switchTab(tabId) {
@@ -42,10 +45,13 @@
         document.querySelector(`.tab-button[onclick="switchTab('${id}')"]`).classList.remove("active");
         document.querySelector(`.tab-button[onclick="switchTab('${id}')"]`).classList.add("inactive");
       });
-
       document.getElementById(tabId).classList.remove("hidden");
       document.querySelector(`.tab-button[onclick="switchTab('${tabId}')"]`).classList.remove("inactive");
       document.querySelector(`.tab-button[onclick="switchTab('${tabId}')"]`).classList.add("active");
+
+      if (!document.getElementById(tabId).hasChildNodes()) {
+        renderCalculator(tabId);
+      }
     }
 
     function getTickSize(price) {
@@ -59,15 +65,14 @@
 
     function renderCalculator(type) {
       const container = document.getElementById(type);
-      const feeDefault = type === 'intraday' ? 2 : 5;
-      const taxDefault = type === 'warrant' ? 0 : (type === 'intraday' ? 0.15 : 0.3);
+      const defaultTax = type === "warrant" ? 0.1 : 0.3;
       container.innerHTML = `
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
           <div><label>買入價格</label><input type="number" id="${type}_buy" class="w-full border p-2" value="100"></div>
           <div><label>股數</label><input type="number" id="${type}_shares" class="w-full border p-2" value="1000"></div>
-          <div><label>手續費折數（輸入 5 代表五折）</label><input type="number" id="${type}_fee" class="w-full border p-2" value="${feeDefault}"></div>
+          <div><label>手續費折數（輸入5代表五折）</label><input type="number" id="${type}_fee" class="w-full border p-2" value="5"></div>
           <div><label>最低手續費</label><input type="number" id="${type}_min" class="w-full border p-2" value="20"></div>
-          <div><label>交易稅率（%）</label><input type="number" id="${type}_tax" class="w-full border p-2" value="${taxDefault}"></div>
+          <div><label>交易稅率（%）</label><input type="number" id="${type}_tax" class="w-full border p-2" value="${defaultTax}"></div>
           <div><label>交易方向</label>
             <select id="${type}_dir" class="w-full border p-2">
               <option value="long">作多</option>
@@ -76,7 +81,7 @@
           </div>
         </div>
         <div class="text-center">
-          <button onclick="resetCalc('${type}')" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">開始試算</button>
+          <button onclick="resetCalc('${type}')" class="bg-blue-600 text-white px-6 py-2 rounded">開始試算</button>
         </div>
         <div class="flex justify-center gap-4 mt-4">
           <button onclick="showMore('${type}', 'up')" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded">顯示更高價格</button>
@@ -102,7 +107,7 @@
       calculate(type);
     }
 
-    const currentSteps = { intraday: 10, stock: 10, warrant: 10 };
+    const currentSteps = { intraday: 10, stock: 10, warrant: 10, odd: 10 };
 
     function resetCalc(type) {
       currentSteps[type] = 10;
@@ -137,10 +142,8 @@
       for (let sell of priceSteps) {
         const totalBuy = buy * shares;
         const totalSell = sell * shares;
-        const tax = Math.floor(totalSell * taxRate);
-        const fee = type === 'warrant'
-          ? Math.max(minFee, Math.floor(totalSell * 0.001425 * feeRate))
-          : Math.max(minFee, Math.floor((totalBuy + totalSell) * 0.001425 * feeRate));
+        const tax = (type === 'intraday' && direction === 'short') ? 0 : Math.floor(totalSell * taxRate);
+        const fee = Math.max(minFee, Math.floor((totalBuy + totalSell) * 0.001425 * feeRate));
         const profit = direction === 'long'
           ? (totalSell - totalBuy - tax - fee)
           : (totalBuy - totalSell - tax - fee);
@@ -159,10 +162,8 @@
       }
     }
 
-    // 預載入三個頁籤內容
+    // 預設載入當沖頁面
     renderCalculator("intraday");
-    renderCalculator("stock");
-    renderCalculator("warrant");
   </script>
 </body>
 </html>
