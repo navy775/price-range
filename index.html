@@ -6,59 +6,55 @@
   <title>股票試算工具</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { font-family: 'Noto Sans TC', sans-serif; }
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+    }
     .tab-button {
-      @apply px-4 py-2 font-bold rounded-t-lg border border-b-0 cursor-pointer transition;
+      @apply px-4 py-2 font-bold rounded-t-lg border border-b-0 transition;
     }
     .tab-button.active {
-      @apply bg-blue-600 text-white;
+      @apply bg-blue-600 text-white shadow-md;
     }
     .tab-button.inactive {
       @apply bg-gray-100 text-gray-600 hover:bg-gray-200;
     }
   </style>
 </head>
-<body class="bg-blue-50 p-4 min-h-screen">
+<body class="bg-blue-50 p-6 min-h-screen">
   <div class="max-w-6xl mx-auto bg-white shadow-2xl rounded-xl">
-    <div class="flex justify-center space-x-4 border-b p-4">
-      <div class="tab-button active" onclick="switchTab('intraday')">當沖</div>
-      <div class="tab-button inactive" onclick="switchTab('stock')">個股</div>
-      <div class="tab-button inactive" onclick="switchTab('warrant')">權證</div>
-      <div class="tab-button inactive" onclick="switchTab('oddlot')">零股</div>
+    <h1 class="text-2xl font-bold text-center py-6 text-blue-700">股票損益試算工具</h1>
+
+    <div class="flex justify-center space-x-2 border-b px-4">
+      <button class="tab-button active" onclick="switchTab('intraday')">當沖</button>
+      <button class="tab-button inactive" onclick="switchTab('stock')">個股</button>
+      <button class="tab-button inactive" onclick="switchTab('warrant')">權證</button>
+      <button class="tab-button inactive" onclick="switchTab('odd')">零股</button>
     </div>
+
     <div id="intraday" class="tab-content p-4"></div>
     <div id="stock" class="tab-content p-4 hidden"></div>
     <div id="warrant" class="tab-content p-4 hidden"></div>
-    <div id="oddlot" class="tab-content p-4 hidden"></div>
+    <div id="odd" class="tab-content p-4 hidden"></div>
   </div>
 
   <script>
-    const tabs = ["intraday", "stock", "warrant", "oddlot"];
+    const tabs = ["intraday", "stock", "warrant", "odd"];
     const tabButtons = document.querySelectorAll(".tab-button");
-    const currentSteps = { intraday: 10, stock: 10, warrant: 10, oddlot: 10 };
+    const currentSteps = { intraday: 10, stock: 10, warrant: 10, odd: 10 };
 
     function switchTab(tabId) {
       tabs.forEach(id => {
         document.getElementById(id).classList.add("hidden");
-        const btn = [...tabButtons].find(b => b.textContent === getTabName(id));
-        btn.classList.remove("active");
-        btn.classList.add("inactive");
+        document.querySelector(`.tab-button[onclick="switchTab('${id}')"]`).classList.remove("active");
+        document.querySelector(`.tab-button[onclick="switchTab('${id}')"]`).classList.add("inactive");
       });
       document.getElementById(tabId).classList.remove("hidden");
-      const activeBtn = [...tabButtons].find(b => b.textContent === getTabName(tabId));
-      activeBtn.classList.remove("inactive");
-      activeBtn.classList.add("active");
+      document.querySelector(`.tab-button[onclick="switchTab('${tabId}')"]`).classList.remove("inactive");
+      document.querySelector(`.tab-button[onclick="switchTab('${tabId}')"]`).classList.add("active");
 
-      if (!document.getElementById(tabId).hasChildNodes()) renderCalculator(tabId);
-    }
-
-    function getTabName(id) {
-      return {
-        intraday: "當沖",
-        stock: "個股",
-        warrant: "權證",
-        oddlot: "零股"
-      }[id];
+      if (!document.getElementById(tabId).hasChildNodes()) {
+        renderCalculator(tabId);
+      }
     }
 
     function getTickSize(price) {
@@ -71,15 +67,15 @@
     }
 
     function renderCalculator(type) {
-      const taxRateMap = { intraday: 0.15, stock: 0.3, warrant: 0.1, oddlot: 0.3 };
+      const taxDefault = type === "warrant" ? 0.1 : type === "intraday" ? 0.15 : 0.3;
       const container = document.getElementById(type);
       container.innerHTML = `
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
           <div><label>買入價格</label><input type="number" id="${type}_buy" class="w-full border p-2" value="100"></div>
-          <div><label>${type === 'oddlot' ? '股數' : '張數（每張1000股）'}</label><input type="number" id="${type}_shares" class="w-full border p-2" value="1"></div>
-          <div><label>手續費折數（輸入5代表五折）</label><input type="number" id="${type}_fee" class="w-full border p-2" value="5"></div>
+          <div><label>股數</label><input type="number" id="${type}_shares" class="w-full border p-2" value="1000"></div>
+          <div><label>手續費折數（輸入 5 代表五折）</label><input type="number" id="${type}_fee" class="w-full border p-2" value="5"></div>
           <div><label>最低手續費</label><input type="number" id="${type}_min" class="w-full border p-2" value="20"></div>
-          <div><label>交易稅率（%）</label><input type="number" id="${type}_tax" class="w-full border p-2" value="${taxRateMap[type]}"></div>
+          <div><label>交易稅率（%）</label><input type="number" id="${type}_tax" class="w-full border p-2" value="${taxDefault}"></div>
           <div><label>交易方向</label>
             <select id="${type}_dir" class="w-full border p-2">
               <option value="long">作多</option>
@@ -88,7 +84,7 @@
           </div>
         </div>
         <div class="text-center">
-          <button onclick="resetCalc('${type}')" class="bg-blue-600 text-white px-6 py-2 rounded">開始試算</button>
+          <button onclick="resetCalc('${type}')" class="bg-blue-600 text-white px-6 py-2 rounded shadow">開始試算</button>
         </div>
         <div class="flex justify-center gap-4 mt-4">
           <button onclick="showMore('${type}', 'up')" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded">顯示更高價格</button>
@@ -96,7 +92,7 @@
         </div>
         <div class="overflow-x-auto mt-4">
           <table class="min-w-full border text-center">
-            <thead class="bg-blue-100">
+            <thead class="bg-blue-100 text-sm">
               <tr>
                 <th class="p-2">買入價</th>
                 <th class="p-2">賣出價</th>
@@ -118,32 +114,32 @@
       calculate(type);
     }
 
-    function showMore(type, dir) {
+    function showMore(type, direction) {
       currentSteps[type] += 5;
       calculate(type);
     }
 
     function calculate(type) {
       const buy = parseFloat(document.getElementById(`${type}_buy`).value);
-      const units = parseInt(document.getElementById(`${type}_shares`).value);
-      const shares = type === 'oddlot' ? units : units * 1000;
+      const shares = parseInt(document.getElementById(`${type}_shares`).value);
       const feeRate = parseFloat(document.getElementById(`${type}_fee`).value) / 10;
       const minFee = parseFloat(document.getElementById(`${type}_min`).value);
       const taxRate = parseFloat(document.getElementById(`${type}_tax`).value) / 100;
       const direction = document.getElementById(`${type}_dir`).value;
       const tick = getTickSize(buy);
+
       const result = document.getElementById(`${type}_result`);
       result.innerHTML = '';
 
-      let prices = [];
+      let priceSteps = [];
       for (let i = -currentSteps[type]; i <= currentSteps[type]; i++) {
         let sell = +(buy + i * tick).toFixed(2);
         if (direction === 'short') sell = +(buy - i * tick).toFixed(2);
-        prices.push(sell);
+        priceSteps.push(sell);
       }
-      if (direction === 'long') prices.reverse();
+      if (direction === 'long') priceSteps.reverse();
 
-      for (let sell of prices) {
+      for (let sell of priceSteps) {
         const totalBuy = buy * shares;
         const totalSell = sell * shares;
         const tax = Math.floor(totalSell * taxRate);
@@ -153,19 +149,20 @@
           : (totalBuy - totalSell - tax - fee);
         const returnRate = (profit / totalBuy * 100).toFixed(2);
 
-        result.innerHTML += `
-          <tr>
-            <td class="p-2">${buy}</td>
-            <td class="p-2">${sell}</td>
-            <td class="p-2">${tax}</td>
-            <td class="p-2">${fee}</td>
-            <td class="p-2 ${profit >= 0 ? 'text-green-600' : 'text-red-600'}">${profit}</td>
-            <td class="p-2 ${profit >= 0 ? 'text-green-600' : 'text-red-600'}">${returnRate}%</td>
-          </tr>
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td class="p-2">${buy}</td>
+          <td class="p-2">${sell}</td>
+          <td class="p-2">${tax}</td>
+          <td class="p-2">${fee}</td>
+          <td class="p-2 ${profit >= 0 ? 'text-green-600' : 'text-red-600'}">${profit}</td>
+          <td class="p-2 ${profit >= 0 ? 'text-green-600' : 'text-red-600'}">${returnRate}%</td>
         `;
+        result.appendChild(row);
       }
     }
 
+    // 預設顯示第一頁
     renderCalculator("intraday");
   </script>
 </body>
