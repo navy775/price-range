@@ -6,11 +6,9 @@
   <title>股票試算工具</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body {
-      font-family: 'Noto Sans TC', sans-serif;
-    }
+    body { font-family: 'Noto Sans TC', sans-serif; }
     .tab-button {
-      @apply px-4 py-2 font-bold rounded-t-lg border border-b-0 cursor-pointer;
+      @apply px-4 py-2 font-bold rounded-t-lg border border-b-0 cursor-pointer transition;
     }
     .tab-button.active {
       @apply bg-blue-600 text-white;
@@ -23,36 +21,44 @@
 <body class="bg-blue-50 p-4 min-h-screen">
   <div class="max-w-6xl mx-auto bg-white shadow-2xl rounded-xl">
     <div class="flex justify-center space-x-4 border-b p-4">
-      <button class="tab-button active" onclick="switchTab('intraday')">當沖試算器</button>
-      <button class="tab-button inactive" onclick="switchTab('stock')">個股試算器</button>
-      <button class="tab-button inactive" onclick="switchTab('warrant')">權證試算器</button>
-      <button class="tab-button inactive" onclick="switchTab('odd')">零股試算器</button>
+      <div class="tab-button active" onclick="switchTab('intraday')">當沖</div>
+      <div class="tab-button inactive" onclick="switchTab('stock')">個股</div>
+      <div class="tab-button inactive" onclick="switchTab('warrant')">權證</div>
+      <div class="tab-button inactive" onclick="switchTab('oddlot')">零股</div>
     </div>
-
     <div id="intraday" class="tab-content p-4"></div>
     <div id="stock" class="tab-content p-4 hidden"></div>
     <div id="warrant" class="tab-content p-4 hidden"></div>
-    <div id="odd" class="tab-content p-4 hidden"></div>
+    <div id="oddlot" class="tab-content p-4 hidden"></div>
   </div>
 
   <script>
-    const tabs = ["intraday", "stock", "warrant", "odd"];
+    const tabs = ["intraday", "stock", "warrant", "oddlot"];
     const tabButtons = document.querySelectorAll(".tab-button");
+    const currentSteps = { intraday: 10, stock: 10, warrant: 10, oddlot: 10 };
 
     function switchTab(tabId) {
       tabs.forEach(id => {
         document.getElementById(id).classList.add("hidden");
-        document.querySelector(`.tab-button[onclick="switchTab('${id}')"]`).classList.remove("active");
-        document.querySelector(`.tab-button[onclick="switchTab('${id}')"]`).classList.add("inactive");
+        const btn = [...tabButtons].find(b => b.textContent === getTabName(id));
+        btn.classList.remove("active");
+        btn.classList.add("inactive");
       });
-
       document.getElementById(tabId).classList.remove("hidden");
-      document.querySelector(`.tab-button[onclick="switchTab('${tabId}')"]`).classList.remove("inactive");
-      document.querySelector(`.tab-button[onclick="switchTab('${tabId}')"]`).classList.add("active");
+      const activeBtn = [...tabButtons].find(b => b.textContent === getTabName(tabId));
+      activeBtn.classList.remove("inactive");
+      activeBtn.classList.add("active");
 
-      if (!document.getElementById(tabId).hasChildNodes()) {
-        renderCalculator(tabId);
-      }
+      if (!document.getElementById(tabId).hasChildNodes()) renderCalculator(tabId);
+    }
+
+    function getTabName(id) {
+      return {
+        intraday: "當沖",
+        stock: "個股",
+        warrant: "權證",
+        oddlot: "零股"
+      }[id];
     }
 
     function getTickSize(price) {
@@ -65,17 +71,15 @@
     }
 
     function renderCalculator(type) {
+      const taxRateMap = { intraday: 0.15, stock: 0.3, warrant: 0.1, oddlot: 0.3 };
       const container = document.getElementById(type);
-      const defaultTax = type === 'warrant' ? 0.1 : (type === 'odd' ? 0.3 : 0.3);
-      const defaultMin = type === 'odd' ? 1 : 20;
-
       container.innerHTML = `
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
           <div><label>買入價格</label><input type="number" id="${type}_buy" class="w-full border p-2" value="100"></div>
-          <div><label>股數</label><input type="number" id="${type}_shares" class="w-full border p-2" value="1000"></div>
-          <div><label>手續費折數（輸入 5 代表五折）</label><input type="number" id="${type}_fee" class="w-full border p-2" value="5"></div>
-          <div><label>最低手續費</label><input type="number" id="${type}_min" class="w-full border p-2" value="${defaultMin}"></div>
-          <div><label>交易稅率（%）</label><input type="number" id="${type}_tax" class="w-full border p-2" value="${defaultTax}"></div>
+          <div><label>${type === 'oddlot' ? '股數' : '張數（每張1000股）'}</label><input type="number" id="${type}_shares" class="w-full border p-2" value="1"></div>
+          <div><label>手續費折數（輸入5代表五折）</label><input type="number" id="${type}_fee" class="w-full border p-2" value="5"></div>
+          <div><label>最低手續費</label><input type="number" id="${type}_min" class="w-full border p-2" value="20"></div>
+          <div><label>交易稅率（%）</label><input type="number" id="${type}_tax" class="w-full border p-2" value="${taxRateMap[type]}"></div>
           <div><label>交易方向</label>
             <select id="${type}_dir" class="w-full border p-2">
               <option value="long">作多</option>
@@ -106,44 +110,40 @@
           </table>
         </div>
       `;
-
-      currentSteps[type] = 10;
       calculate(type);
     }
-
-    const currentSteps = { intraday: 10, stock: 10, warrant: 10, odd: 10 };
 
     function resetCalc(type) {
       currentSteps[type] = 10;
       calculate(type);
     }
 
-    function showMore(type, direction) {
+    function showMore(type, dir) {
       currentSteps[type] += 5;
       calculate(type);
     }
 
     function calculate(type) {
       const buy = parseFloat(document.getElementById(`${type}_buy`).value);
-      const shares = parseInt(document.getElementById(`${type}_shares`).value);
+      const units = parseInt(document.getElementById(`${type}_shares`).value);
+      const shares = type === 'oddlot' ? units : units * 1000;
       const feeRate = parseFloat(document.getElementById(`${type}_fee`).value) / 10;
       const minFee = parseFloat(document.getElementById(`${type}_min`).value);
       const taxRate = parseFloat(document.getElementById(`${type}_tax`).value) / 100;
       const direction = document.getElementById(`${type}_dir`).value;
       const tick = getTickSize(buy);
-
       const result = document.getElementById(`${type}_result`);
       result.innerHTML = '';
 
-      let priceSteps = [];
+      let prices = [];
       for (let i = -currentSteps[type]; i <= currentSteps[type]; i++) {
         let sell = +(buy + i * tick).toFixed(2);
         if (direction === 'short') sell = +(buy - i * tick).toFixed(2);
-        priceSteps.push(sell);
+        prices.push(sell);
       }
-      if (direction === 'long') priceSteps.reverse();
+      if (direction === 'long') prices.reverse();
 
-      for (let sell of priceSteps) {
+      for (let sell of prices) {
         const totalBuy = buy * shares;
         const totalSell = sell * shares;
         const tax = Math.floor(totalSell * taxRate);
@@ -153,20 +153,19 @@
           : (totalBuy - totalSell - tax - fee);
         const returnRate = (profit / totalBuy * 100).toFixed(2);
 
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td class="p-2">${buy}</td>
-          <td class="p-2">${sell}</td>
-          <td class="p-2">${tax}</td>
-          <td class="p-2">${fee}</td>
-          <td class="p-2 ${profit >= 0 ? 'text-green-600' : 'text-red-600'}">${profit}</td>
-          <td class="p-2 ${profit >= 0 ? 'text-green-600' : 'text-red-600'}">${returnRate}%</td>
+        result.innerHTML += `
+          <tr>
+            <td class="p-2">${buy}</td>
+            <td class="p-2">${sell}</td>
+            <td class="p-2">${tax}</td>
+            <td class="p-2">${fee}</td>
+            <td class="p-2 ${profit >= 0 ? 'text-green-600' : 'text-red-600'}">${profit}</td>
+            <td class="p-2 ${profit >= 0 ? 'text-green-600' : 'text-red-600'}">${returnRate}%</td>
+          </tr>
         `;
-        result.appendChild(row);
       }
     }
 
-    // 預設載入第一頁
     renderCalculator("intraday");
   </script>
 </body>
