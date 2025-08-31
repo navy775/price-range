@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>股票試算工具</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -10,10 +10,10 @@
       font-family: 'Noto Sans TC', sans-serif;
     }
     .tab-button {
-      @apply px-4 py-2 font-bold rounded-t-lg border border-b-0 transition;
+      @apply px-4 py-2 font-bold rounded-t-lg border border-b-0 cursor-pointer;
     }
     .tab-button.active {
-      @apply bg-blue-600 text-white shadow-lg;
+      @apply bg-blue-600 text-white;
     }
     .tab-button.inactive {
       @apply bg-gray-100 text-gray-600 hover:bg-gray-200;
@@ -22,7 +22,7 @@
 </head>
 <body class="bg-blue-50 p-4 min-h-screen">
   <div class="max-w-6xl mx-auto bg-white shadow-2xl rounded-xl">
-    <div class="flex justify-center space-x-2 border-b p-4">
+    <div class="flex justify-center space-x-4 border-b p-4">
       <button class="tab-button active" onclick="switchTab('intraday')">當沖試算器</button>
       <button class="tab-button inactive" onclick="switchTab('stock')">個股試算器</button>
       <button class="tab-button inactive" onclick="switchTab('warrant')">權證試算器</button>
@@ -45,6 +45,7 @@
         document.querySelector(`.tab-button[onclick="switchTab('${id}')"]`).classList.remove("active");
         document.querySelector(`.tab-button[onclick="switchTab('${id}')"]`).classList.add("inactive");
       });
+
       document.getElementById(tabId).classList.remove("hidden");
       document.querySelector(`.tab-button[onclick="switchTab('${tabId}')"]`).classList.remove("inactive");
       document.querySelector(`.tab-button[onclick="switchTab('${tabId}')"]`).classList.add("active");
@@ -65,13 +66,15 @@
 
     function renderCalculator(type) {
       const container = document.getElementById(type);
-      const defaultTax = type === "warrant" ? 0.1 : 0.3;
+      const defaultTax = type === 'warrant' ? 0.1 : (type === 'odd' ? 0.3 : 0.3);
+      const defaultMin = type === 'odd' ? 1 : 20;
+
       container.innerHTML = `
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
           <div><label>買入價格</label><input type="number" id="${type}_buy" class="w-full border p-2" value="100"></div>
           <div><label>股數</label><input type="number" id="${type}_shares" class="w-full border p-2" value="1000"></div>
-          <div><label>手續費折數（輸入5代表五折）</label><input type="number" id="${type}_fee" class="w-full border p-2" value="5"></div>
-          <div><label>最低手續費</label><input type="number" id="${type}_min" class="w-full border p-2" value="20"></div>
+          <div><label>手續費折數（輸入 5 代表五折）</label><input type="number" id="${type}_fee" class="w-full border p-2" value="5"></div>
+          <div><label>最低手續費</label><input type="number" id="${type}_min" class="w-full border p-2" value="${defaultMin}"></div>
           <div><label>交易稅率（%）</label><input type="number" id="${type}_tax" class="w-full border p-2" value="${defaultTax}"></div>
           <div><label>交易方向</label>
             <select id="${type}_dir" class="w-full border p-2">
@@ -103,6 +106,7 @@
           </table>
         </div>
       `;
+
       currentSteps[type] = 10;
       calculate(type);
     }
@@ -142,7 +146,7 @@
       for (let sell of priceSteps) {
         const totalBuy = buy * shares;
         const totalSell = sell * shares;
-        const tax = (type === 'intraday' && direction === 'short') ? 0 : Math.floor(totalSell * taxRate);
+        const tax = Math.floor(totalSell * taxRate);
         const fee = Math.max(minFee, Math.floor((totalBuy + totalSell) * 0.001425 * feeRate));
         const profit = direction === 'long'
           ? (totalSell - totalBuy - tax - fee)
@@ -162,7 +166,7 @@
       }
     }
 
-    // 預設載入當沖頁面
+    // 預設載入第一頁
     renderCalculator("intraday");
   </script>
 </body>
